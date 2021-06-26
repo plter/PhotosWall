@@ -1,0 +1,22 @@
+{
+  "name": "photoswall",
+  "version": "1.0.0",
+  "description": "照片墙",
+  "main": "index.js",
+  "scripts": {
+    "serve": "npx http-server ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/plter/PhotosWall.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/plter/PhotosWall/issues"
+  },
+  "homepage": "https://github.com/plter/PhotosWall#readme",
+  "dependencies": {
+    "http-server": "^0.12.3"
+  }
+}
