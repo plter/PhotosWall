@@ -1,6 +1,6 @@
 package com.plter.two.anim {
 
-    import org.apache.royale.html.elements.A;
+
 
     public class AnimSet {
 
