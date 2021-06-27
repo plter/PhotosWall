@@ -1,7 +1,9 @@
 package {
-    import com.plter.two.display.Scene;
+    import com.plter.two.anim.AnimSet;
+    import com.plter.two.anim.PropertyAnim;
     import com.plter.two.app.Context;
     import com.plter.two.display.Loader;
+    import com.plter.two.display.Scene;
     import com.plter.two.net.Connection;
     import com.plter.two.net.ConnectionEvent;
 
@@ -9,6 +11,7 @@ package {
 
         private var loaders:Array = [];
         private var currentLoaderIndex:uint = 0;
+        private var animRunning:Boolean = false;
 
         public function MainScene(context:Context) {
             super(context);
@@ -25,62 +28,104 @@ package {
         }
 
         private function createPhotoLoaders(photos:Array):void {
-            for (var key:String in photos) {
-                var element:Object = photos[key];
+            var len:int = photos.length;
+            for (var index:int = 0; index < len; index++) {
+                var photoName:String = photos[index];
                 var l:Loader = new Loader(context);
-                l.load("/res/" + element);
+                l.load("/res/" + photoName);
                 loaders.push(l);
                 l.z = 10000;
                 addChild(l);
+                l['index'] = index;
             }
+        }
+
+        private function getLeftPositionAtIndex(index:int):* {
+            return {'z': -5, 'x': index * 0.2 - 4, 'rotationY': Math.PI / 2};
+        }
+
+        private function getRightPositionAtIndex(index:int):* {
+            return {'z': -5, 'x': 4 - (loaders.length - index - 1) * 0.2, 'rotationY': -Math.PI / 2};
+        }
+
+        private function getFoucsPosition():* {
+            return {'z': -2.3, 'x': 0, 'rotationY': 0};
         }
 
         private function showLoader(index:int):void {
             var i:int = 0;
             var l:Loader;
+            var p:*;
             for (i = 0; i < index; i++) {
                 l = loaders[i];
-                l.z = -5;
-                l.x = i * 0.2 - 4;
-                l.rotationY = Math.PI / 2;
+                p = getLeftPositionAtIndex(i);
+                l.z = p['z'];
+                l.x = p['x'];
+                l.rotationY = p['rotationY'];
             }
             l = loaders[index];
-            l.z = -2.5;
-            l.x = 0;
-            l.rotationY = 0;
+            p = getFoucsPosition();
+            l.z = p['z'];
+            l.x = p['x'];
+            l.rotationY = p['rotationY'];
             for (i = index + 1; i < loaders.length; i++) {
                 l = loaders[i];
-                l.z = -5;
-                l.x = 4 - (loaders.length - i - 1) * 0.2;
-                l.rotationY = Math.PI / 2;
+                p = getRightPositionAtIndex(i);
+                l.z = p['z'];
+                l.x = p['x'];
+                l.rotationY = p['rotationY'];
             }
             currentLoaderIndex = index;
         }
 
-        override public function onClick(eventType:String, x:Number, y:Number, e:MouseEvent):void {
-            var len:int = loaders.length;
 
-            var clickedIndex:int = -1;
-            var index:int = 0;
-            var element:Loader;
-            for (index = currentLoaderIndex + 1; index < len; index++) {
-                element = loaders[index];
-                if (element.hitTestPoint(x, y)) {
-                    clickedIndex = index;
-                    break;
+        private function moveObjectToTargetPosition(obj:Loader, targetPosition:*, completeHandler:Function = null):void {
+            var animFrames:int = 20;
+            new AnimSet(completeHandler, new PropertyAnim(this, obj, 'x', obj.x, targetPosition['x'], animFrames), new PropertyAnim(this, obj, 'z', obj.z, targetPosition['z'], animFrames), new PropertyAnim(this, obj, 'rotationY', obj.rotationY, targetPosition['rotationY'], animFrames)).together();
+        }
+
+        private function moveToIndex(targetIndex:int):void {
+            function next():void {
+                if (currentLoaderIndex >= targetIndex) {
+                    animRunning = false;
+                    return;
                 }
+                moveObjectToTargetPosition(loaders[currentLoaderIndex], getLeftPositionAtIndex(currentLoaderIndex));
+                currentLoaderIndex++;
+                moveObjectToTargetPosition(loaders[currentLoaderIndex], getFoucsPosition(), next);
             }
-            if (clickedIndex < 0) {
-                for (index = currentLoaderIndex - 1; index >= 0; index--) {
-                    element = loaders[index];
-                    if (element.hitTestPoint(x, y)) {
-                        clickedIndex = index;
-                        break;
-                    }
+
+            function prev():void {
+                if (currentLoaderIndex <= targetIndex) {
+                    animRunning = false;
+                    return;
                 }
+                moveObjectToTargetPosition(loaders[currentLoaderIndex], getRightPositionAtIndex(currentLoaderIndex));
+                currentLoaderIndex--;
+                moveObjectToTargetPosition(loaders[currentLoaderIndex], getFoucsPosition(), prev);
             }
-            if (clickedIndex > -1) {
-                showLoader(clickedIndex);
+
+            if (targetIndex > currentLoaderIndex) {
+                animRunning = true;
+                next();
+            }
+            if (targetIndex < currentLoaderIndex) {
+                animRunning = true;
+                prev();
+            }
+        }
+
+        override public function onClick(eventType:String, x:Number, y:Number, e:MouseEvent):void {
+
+            if (animRunning) {
+                return;
+            }
+
+            var objects:Array = getObjectsAtPoint(x, y);
+            if (objects.length) {
+                var clickedItem:Loader = objects[0];
+                var clickedIndex:int = clickedItem['index'];
+                moveToIndex(clickedIndex);
             }
         }
     }
